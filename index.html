@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>罗德岛电台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <section id="gate" class="gate">
+    <form id="gate-form" class="gate-card">
+      <div class="seal" aria-hidden="true">岛</div>
+      <p class="kicker">RHODES ISLAND</p>
+      <h1>罗德岛电台</h1>
+      <p class="lead">一个给岛上的人说话的地方。两个名字各有一张头像，发言时可以切换。</p>
+      <div class="identity">
+        <label class="avatar-pick">
+          <span class="avatar xl gate-avatar" data-slot="0">+</span>
+          <input class="avatar-file" data-slot="0" type="file" accept="image/*" hidden />
+        </label>
+        <div>
+          <label class="field">
+            <span>名字一</span>
+            <input id="gate-name" maxlength="16" placeholder="比如：夜航" autocomplete="nickname" required />
+          </label>
+          <button class="text-btn clear-avatar" data-slot="0" type="button" hidden>不使用这张头像</button>
+        </div>
+      </div>
+      <div class="identity">
+        <label class="avatar-pick">
+          <span class="avatar xl gate-avatar" data-slot="1">+</span>
+          <input class="avatar-file" data-slot="1" type="file" accept="image/*" hidden />
+        </label>
+        <div>
+          <label class="field">
+            <span>名字二</span>
+            <input id="gate-name-b" maxlength="16" placeholder="另一个名字" />
+          </label>
+          <button class="text-btn clear-avatar" data-slot="1" type="button" hidden>不使用这张头像</button>
+        </div>
+      </div>
+      <div class="suffixes" id="suffixes">
+        <span>给正在填写的名字加上编号</span>
+        <button type="button" data-mark="①">①</button>
+        <button type="button" data-mark="②">②</button>
+        <button type="button" data-mark="③">③</button>
+        <button type="button" data-mark="④">④</button>
+        <button type="button" data-mark="⑤">⑤</button>
+        <button type="button" data-mark="⑥">⑥</button>
+        <button type="button" data-mark="⑦">⑦</button>
+        <button type="button" data-mark="⑧">⑧</button>
+        <button type="button" data-mark="⑨">⑨</button>
+      </div>
+      <p id="gate-error" class="error" hidden>先写一个名字，再进来。</p>
+      <button id="gate-submit" type="submit">进入</button>
+    </form>
+  </section>
+
+  <div id="home" class="home" hidden>
+    <header class="top">
+      <div class="brand">
+        <div class="seal sm" aria-hidden="true">岛</div>
+        <div>
+          <p class="kicker">交流站</p>
+          <strong>罗德岛电台</strong>
+        </div>
+      </div>
+      <div class="me">
+        <span id="me-avatar" class="avatar sm"></span>
+        <div class="alias-switch" data-switch role="group" aria-label="发言名字"></div>
+        <button id="leave" type="button">更换资料</button>
+      </div>
+    </header>
+
+    <div class="shell">
+      <nav class="boards" id="boards" aria-label="版块"></nav>
+
+      <main class="column">
+        <form id="composer" class="composer">
+          <div class="composer-head">
+            <div class="avatar" id="composer-avatar">岛</div>
+            <div>
+              <div class="alias-switch" data-switch role="group" aria-label="发言名字"></div>
+              <p id="board-hint">发到休息处，坐下来歇一会</p>
+            </div>
+          </div>
+          <textarea id="post-text" maxlength="200" rows="3" placeholder="写一段话，也可以配上图片。"></textarea>
+          <div id="previews" class="previews"></div>
+          <p id="compose-error" class="error" hidden>写一点字，或配上一张图。</p>
+          <div class="composer-bar">
+            <div class="bar-left">
+              <label class="pick">
+                配图
+                <input id="post-images" type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden />
+              </label>
+              <span id="count">0 / 200</span>
+            </div>
+            <button type="submit">发表</button>
+          </div>
+        </form>
+        <div id="feed" class="feed"></div>
+      </main>
+
+      <aside class="side">
+        <section class="panel">
+          <h2>这个版块</h2>
+          <p id="board-blurb"></p>
+        </section>
+        <section class="panel">
+          <h2>也在这里</h2>
+          <ul id="people" class="people"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+  <dialog id="viewer">
+    <img id="viewer-img" alt="" />
+    <button id="viewer-close" type="button">关闭</button>
+  </dialog>
+  <script src="app.js"></script>
+</body>
+</html>
