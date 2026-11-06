@@ -1,32 +1,3 @@
-function cratePhoto() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 800;
-  canvas.height = 520;
-  const g = canvas.getContext("2d");
-  const sky = g.createLinearGradient(0, 0, 800, 520);
-  sky.addColorStop(0, "#f6d7ae");
-  sky.addColorStop(1, "#e7a56a");
-  g.fillStyle = sky;
-  g.fillRect(0, 0, 800, 520);
-  g.fillStyle = "#8d4b2a";
-  g.fillRect(70, 280, 660, 180);
-  g.fillStyle = "#6d351c";
-  g.fillRect(70, 280, 660, 16);
-  [[210, 250], [330, 230], [450, 255], [570, 228], [280, 330], [410, 345], [540, 325]].forEach(([x, y], index) => {
-    g.beginPath();
-    g.fillStyle = index % 2 ? "#e15d24" : "#f08a3a";
-    g.arc(x, y, 52, 0, Math.PI * 2);
-    g.fill();
-    g.beginPath();
-    g.strokeStyle = "#2f6b3a";
-    g.lineWidth = 3;
-    g.moveTo(x, y - 48);
-    g.lineTo(x + 8, y - 64);
-    g.stroke();
-  });
-  return canvas.toDataURL("image/jpeg", 0.86);
-}
-
 const boards = [
   {
     id: "square",
@@ -34,26 +5,7 @@ const boards = [
     hint: "坐下来歇一会",
     blurb: "不想赶路的时候就来这里。喝茶、发呆、说一句今天还好，都可以。",
     people: ["茶水", "窗边", "信号"],
-    posts: [
-      {
-        id: "p1",
-        name: "茶水",
-        text: "休息室新到了一箱橘子。想拿的人直接来，不用打招呼。",
-        time: "今天 09:20",
-        likes: 6,
-        liked: false,
-        replies: [{ name: "窗边", text: "我下午过去，帮你留两个。" }]
-      },
-      {
-        id: "p2",
-        name: "信号",
-        text: "靠窗的位子空着。谁要是走累了，过来坐一会儿。",
-        time: "今天 11:05",
-        likes: 2,
-        liked: false,
-        replies: []
-      }
-    ]
+    posts: []
   },
   {
     id: "night",
@@ -61,18 +13,7 @@ const boards = [
     hint: "文字和图片",
     blurb: "写一段，或者配一张图。看到喜欢的，就留下一句回应。",
     people: ["值夜", "灯"],
-    posts: [
-      {
-        id: "p3",
-        name: "值夜",
-        text: "今天的云很好看，拍了一张放在这里。",
-        time: "昨天 23:40",
-        images: [cratePhoto()],
-        likes: 4,
-        liked: false,
-        replies: [{ name: "灯", text: "颜色很暖，我存下来了。" }]
-      }
-    ]
+    posts: []
   },
   {
     id: "work",
@@ -80,17 +21,7 @@ const boards = [
     hint: "开一局",
     blurb: "找人一起玩、约时间、分享刚打完的一局，都丢在这里。",
     people: ["扳手", "仓库"],
-    posts: [
-      {
-        id: "p4",
-        name: "仓库",
-        text: "晚上八点缺一个人。想玩的直接回我，来得及。",
-        time: "今天 08:10",
-        likes: 1,
-        liked: false,
-        replies: []
-      }
-    ]
+    posts: []
   }
 ];
 
@@ -100,14 +31,22 @@ function baseName(value) {
   return value.trim().replace(NUMBER_SUFFIX, "");
 }
 
+let clientId = localStorage.getItem("rhodes-client") || crypto.randomUUID();
+localStorage.setItem("rhodes-client", clientId);
+let deviceCode = localStorage.getItem("rhodes-code") || "";
+let remoteClaims = {};
+
 function takenNames() {
   const taken = new Set();
+  Object.entries(remoteClaims).forEach(([name, owner]) => {
+    if (owner !== clientId) taken.add(name);
+  });
   boards.forEach((board) => {
     board.people.forEach((name) => taken.add(name));
     board.posts.forEach((post) => {
-      if (!post.mine && post.name) taken.add(post.name);
-      post.replies.forEach((reply) => {
-        if (!reply.mine && reply.name) taken.add(reply.name);
+      if (post.clientId !== clientId && post.name) taken.add(post.name);
+      (post.replies || []).forEach((reply) => {
+        if (reply.clientId !== clientId && reply.name) taken.add(reply.name);
       });
     });
   });
@@ -117,8 +56,12 @@ function takenNames() {
   return taken;
 }
 
+function stored(key) {
+  return localStorage.getItem(key) || sessionStorage.getItem(key) || "";
+}
+
 function loadProfile() {
-  const saved = sessionStorage.getItem("rhodes-profile");
+  const saved = stored("rhodes-profile");
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -129,7 +72,7 @@ function loadProfile() {
   }
   let names = ["", ""];
   let active = 0;
-  const legacy = sessionStorage.getItem("rhodes-names");
+  const legacy = stored("rhodes-names");
   if (legacy) {
     try {
       const parsed = JSON.parse(legacy);
@@ -139,9 +82,9 @@ function loadProfile() {
       console.warn(error);
     }
   } else {
-    names[0] = sessionStorage.getItem("rhodes-name") || "";
+    names[0] = stored("rhodes-name");
   }
-  const avatar = sessionStorage.getItem("rhodes-avatar") || "";
+  const avatar = stored("rhodes-avatar");
   return {
     active,
     aliases: [
@@ -164,11 +107,89 @@ function speaking() {
 }
 
 function saveProfile() {
-  sessionStorage.setItem("rhodes-profile", JSON.stringify({
+  localStorage.setItem("rhodes-profile", JSON.stringify({
     active: state.active,
     aliases: state.aliases
   }));
-  sessionStorage.setItem("rhodes-name", speaking().name || "");
+  localStorage.setItem("rhodes-name", speaking().name || "");
+}
+
+function rememberCode(code) {
+  if (!code) return;
+  deviceCode = code;
+  localStorage.setItem("rhodes-code", code);
+  const node = document.querySelector("#device-code");
+  if (node) node.textContent = `回站编号 ${code}`;
+}
+
+function adoptDevice(found) {
+  clientId = found.clientId;
+  localStorage.setItem("rhodes-client", clientId);
+  const aliases = (found.aliases || []).slice(0, 2).map((alias) => ({
+    name: alias.name || "",
+    avatar: alias.avatar || ""
+  }));
+  while (aliases.length < 2) aliases.push({ name: "", avatar: "" });
+  state.active = Number(found.active) === 1 && aliases[1].name ? 1 : 0;
+  applyProfile(aliases);
+  rememberCode(found.code);
+}
+
+function setLive(text, online) {
+  const live = document.querySelector("#live");
+  if (!live) return;
+  live.textContent = text;
+  live.classList.toggle("off", !online);
+}
+
+async function api(path, payload) {
+  const response = await fetch(path, {
+    method: payload ? "POST" : "GET",
+    headers: payload ? { "Content-Type": "application/json" } : undefined,
+    body: payload ? JSON.stringify(payload) : undefined
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.error || "没连上共用站点");
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
+function applyRemote(data) {
+  remoteClaims = data.names || {};
+  boards.forEach((board) => {
+    board.posts = (data.posts?.[board.id] || []).map((post) => ({
+      ...post,
+      images: post.images || [],
+      replies: post.replies || [],
+      likes: (post.likedBy || []).length,
+      liked: (post.likedBy || []).includes(clientId)
+    }));
+  });
+}
+
+async function pull() {
+  const open = feed.querySelector(".reply-box:not([hidden])");
+  const openId = open?.dataset.for || "";
+  const openText = open?.querySelector("input")?.value || "";
+  const data = await api("/api/state");
+  applyRemote(data);
+  const share = data.share ? `其他设备打开 ${data.share}` : "其他设备上的发言会一起出现";
+  setLive(`已连上。${share}`, true);
+  if (!home.hidden) {
+    render();
+    if (openId) {
+      const box = feed.querySelector(`.reply-box[data-for="${CSS.escape(openId)}"]`);
+      if (box) {
+        box.hidden = false;
+        const input = box.querySelector("input");
+        input.value = openText;
+      }
+    }
+  }
+  return data;
 }
 
 const gate = document.querySelector("#gate");
@@ -271,6 +292,7 @@ function showHome() {
   const current = speaking();
   paintAvatar(meAvatar, current.name, current.avatar);
   paintAvatar(composerAvatar, current.name, current.avatar);
+  rememberCode(deviceCode);
   renderSwitch();
   render();
 }
@@ -303,8 +325,12 @@ function render() {
     avatar: alias.avatar,
     tag: state.aliases.indexOf(alias) === state.active ? " · 正在发言" : " · 你"
   }));
+  board.posts.forEach((post) => {
+    if (!post.name || listed.some((person) => person.name === post.name)) return;
+    listed.push({ name: post.name, avatar: post.avatar || "", tag: "" });
+  });
   board.people.forEach((name) => {
-    if (!state.aliases.some((alias) => alias.name === name)) listed.push({ name, avatar: "", tag: "" });
+    if (!listed.some((person) => person.name === name)) listed.push({ name, avatar: "", tag: "" });
   });
   people.innerHTML = listed.map((person) => `
     <li>${avatarMarkup(person.name, person.avatar)}<span>${escapeHtml(person.name)}${person.tag}</span></li>
@@ -436,8 +462,25 @@ suffixes.addEventListener("click", (event) => {
   paintGate();
 });
 
-gateForm.addEventListener("submit", (event) => {
+gateForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const returnCode = document.querySelector("#return-code").value.trim();
+  if (returnCode && gateSubmit.textContent !== "保存") {
+    try {
+      const found = await api("/api/return", { code: returnCode });
+      adoptDevice(found);
+      const data = await api("/api/profile", { clientId, active: state.active, aliases: state.aliases });
+      applyRemote(data);
+      rememberCode(data.device?.code || found.code);
+    } catch (error) {
+      gateError.textContent = error.message;
+      gateError.hidden = false;
+      return;
+    }
+    gateError.hidden = true;
+    showHome();
+    return;
+  }
   const first = gateName.value.trim();
   const second = gateNameB.value.trim();
   if (!baseName(first)) {
@@ -459,10 +502,20 @@ gateForm.addEventListener("submit", (event) => {
     gateError.hidden = false;
     return;
   }
-  applyProfile([
+  const aliases = [
     { name: first, avatar: pendingAvatars[0] },
     { name: second, avatar: second ? pendingAvatars[1] : "" }
-  ]);
+  ];
+  try {
+    const data = await api("/api/profile", { clientId, active: state.active, aliases });
+    applyRemote(data);
+    rememberCode(data.device?.code);
+  } catch (error) {
+    gateError.textContent = error.message;
+    gateError.hidden = false;
+    return;
+  }
+  applyProfile(aliases);
   gateError.hidden = true;
   showHome();
 });
@@ -480,6 +533,13 @@ document.addEventListener("click", (event) => {
   state.active = index;
   saveProfile();
   showHome();
+  api("/api/profile", { clientId, active: state.active, aliases: state.aliases })
+    .then((data) => {
+      applyRemote(data);
+      rememberCode(data.device?.code);
+      render();
+    })
+    .catch((error) => setLive(error.message, false));
 });
 
 boardNav.addEventListener("click", (event) => {
@@ -539,7 +599,7 @@ previews.addEventListener("click", (event) => {
   renderPreviews();
 });
 
-composer.addEventListener("submit", (event) => {
+composer.addEventListener("submit", async (event) => {
   event.preventDefault();
   const text = postText.value.trim();
   if (!text && !draftImages.length) {
@@ -548,24 +608,22 @@ composer.addEventListener("submit", (event) => {
     postText.focus();
     return;
   }
-  const now = new Intl.DateTimeFormat("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23"
-  }).format(new Date());
-  currentBoard().posts.unshift({
-    id: `me-${Date.now()}`,
-    name: speaking().name,
-    avatar: speaking().avatar,
-    alias: state.active,
-    mine: true,
-    text,
-    images: [...draftImages],
-    time: `今天 ${now}`,
-    likes: 0,
-    liked: false,
-    replies: []
-  });
+  try {
+    const data = await api("/api/posts", {
+      clientId,
+      boardId: state.boardId,
+      alias: state.active,
+      name: speaking().name,
+      avatar: speaking().avatar,
+      text,
+      images: [...draftImages]
+    });
+    applyRemote(data);
+  } catch (error) {
+    composeError.textContent = error.message;
+    composeError.hidden = false;
+    return;
+  }
   postText.value = "";
   draftImages.length = 0;
   renderPreviews();
@@ -588,10 +646,12 @@ feed.addEventListener("click", (event) => {
     return;
   }
   if (like) {
-    const post = board.posts.find((item) => item.id === like.dataset.like);
-    post.liked = !post.liked;
-    post.likes += post.liked ? 1 : -1;
-    render();
+    api("/api/likes", { clientId, boardId: state.boardId, postId: like.dataset.like })
+      .then((data) => {
+        applyRemote(data);
+        render();
+      })
+      .catch((error) => setLive(error.message, false));
     return;
   }
   if (reply) {
@@ -601,15 +661,28 @@ feed.addEventListener("click", (event) => {
   }
 });
 
-feed.addEventListener("submit", (event) => {
+feed.addEventListener("submit", async (event) => {
   const form = event.target.closest(".reply-box");
   if (!form) return;
   event.preventDefault();
   const input = form.querySelector("input");
   const text = input.value.trim();
   if (!text) return;
-  const post = currentBoard().posts.find((item) => item.id === form.dataset.for);
-  post.replies.push({ name: speaking().name, avatar: speaking().avatar, alias: state.active, mine: true, text });
+  try {
+    const data = await api("/api/replies", {
+      clientId,
+      boardId: state.boardId,
+      postId: form.dataset.for,
+      alias: state.active,
+      name: speaking().name,
+      avatar: speaking().avatar,
+      text
+    });
+    applyRemote(data);
+  } catch (error) {
+    setLive(error.message, false);
+    return;
+  }
   render();
 });
 
@@ -618,5 +691,41 @@ viewer.addEventListener("click", (event) => {
   if (event.target === viewer) viewer.close();
 });
 
-if (state.aliases[0].name) showHome();
-else openGate(false);
+async function enter() {
+  try {
+    await pull();
+  } catch (error) {
+    setLive("没连上共用站点。请从正在运行的网站地址进入。", false);
+    if (state.aliases[0].name) showHome();
+    else openGate(false);
+    return;
+  }
+  if (!state.aliases[0].name) {
+    try {
+      const saved = await api(`/api/device?id=${encodeURIComponent(clientId)}`);
+      if (saved.device?.aliases?.[0]?.name) adoptDevice(saved.device);
+    } catch (error) {
+      openGate(false);
+      return;
+    }
+  }
+  if (!state.aliases[0].name) {
+    openGate(false);
+    return;
+  }
+  try {
+    const data = await api("/api/profile", { clientId, active: state.active, aliases: state.aliases });
+    applyRemote(data);
+    rememberCode(data.device?.code);
+    showHome();
+  } catch (error) {
+    openGate(true);
+    gateError.textContent = error.message;
+    gateError.hidden = false;
+  }
+}
+
+enter();
+setInterval(() => {
+  pull().catch(() => setLive("没连上共用站点。请从正在运行的网站地址进入。", false));
+}, 2000);

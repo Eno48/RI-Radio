@@ -159,6 +159,9 @@ h1, h2, p { margin-top: 0; }
 }
 
 .error { color: var(--accent); font-size: 13px; margin: 10px 0 0; }
+.return-field { margin-top: 14px; }
+.device-code { margin: 0 0 8px; font-weight: 700; letter-spacing: 0.12em; }
+.device-note { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
 
 .home { min-height: 100vh; }
 
@@ -367,6 +370,8 @@ textarea { resize: vertical; min-height: 84px; line-height: 1.6; }
 }
 
 .side { display: flex; flex-direction: column; gap: 12px; }
+.live { margin: 0; color: #2f6b4f; font-size: 13px; line-height: 1.6; }
+.live.off { color: var(--accent); }
 .panel h2 { font-size: 14px; margin-bottom: 8px; }
 .panel p { margin: 0; line-height: 1.7; font-size: 14px; }
 .people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

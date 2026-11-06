@@ -24,7 +24,7 @@
         <div>
           <label class="field">
             <span>名字一</span>
-            <input id="gate-name" maxlength="16" placeholder="比如：夜航" autocomplete="nickname" required />
+            <input id="gate-name" maxlength="16" placeholder="比如：夜航" autocomplete="nickname" />
           </label>
           <button class="text-btn clear-avatar" data-slot="0" type="button" hidden>不使用这张头像</button>
         </div>
@@ -54,6 +54,10 @@
         <button type="button" data-mark="⑧">⑧</button>
         <button type="button" data-mark="⑨">⑨</button>
       </div>
+      <label class="field return-field">
+        <span>回站编号</span>
+        <input id="return-code" maxlength="8" placeholder="来过的话填这里，不用重新取名" autocomplete="off" />
+      </label>
       <p id="gate-error" class="error" hidden>先写一个名字，再进来。</p>
       <button id="gate-submit" type="submit">进入</button>
     </form>
@@ -105,6 +109,12 @@
       </main>
 
       <aside class="side">
+        <p id="live" class="live">正在连接其他设备…</p>
+        <section class="panel">
+          <h2>这台设备</h2>
+          <p id="device-code" class="device-code">正在记住这台设备…</p>
+          <p class="device-note">下次打开会直接用现在的名字、头像和发言。换了网址时，填上面的回站编号就能回来。</p>
+        </section>
         <section class="panel">
           <h2>这个版块</h2>
           <p id="board-blurb"></p>
